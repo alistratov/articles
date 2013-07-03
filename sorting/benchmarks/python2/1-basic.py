@@ -1,85 +1,100 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
+import random
+import string
 
-from fnmatch import fnmatch
-from os import path, walk, chdir, getcwd
-from zipfile import ZipFile
+from benchmark import timethese
 
-# ------------------------------------------------------------------------------
-# Constants
-# ------------------------------------------------------------------------------
-MAX_DEPTH = 5
-ZF_NAME = "%s.zip"
-GLOBAL_ALLOWED_FILES = ['har', 'tcpdump', 'shutter.log', 'shoot.log', 
-                'outline.png', 'tr_*.png', 'results.csv', 'task.json']
+SAMPLE_SIZE             = 100 * 1000
+BENCHMARK_ITERATIONS    = 100
 
-# ------------------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------------------
-def allowed(fname, match_list):
-    for pattern in match_list:
-        if fnmatch(fname, pattern):
-            return True
-    return False
 
-def add_files(zf, dpath, files, relpathstart, allowed=None, *args):
-    for f in files:
-        fpath = path.join(dpath, f)
-        if not allowed or allowed(f, *args):
-            frelpath = path.relpath(fpath, relpathstart)
-            zf.write(frelpath)
-
-def make_zip(dirpath, viewports):
-    dirabs = path.abspath(dirpath)
-    dirrelpath, dirname = path.split(dirabs)
-    depth = 0
-    # prepare allowed dirs, files, etc
-    allowed_dirs = ['viewports'] if viewports else []
-    allowed_files = GLOBAL_ALLOWED_FILES 
-    # create zipfile
-    zf_name = ZF_NAME % dirname
-    zf = ZipFile(zf_name, 'w')
-    # Remember and change working dir to archive
-    orig_cwd = getcwd()
-    chdir(dirrelpath)
-
-    for dpath, dnames, fnames in walk(dirabs):
-        if allowed(path.split(dpath)[1], allowed_dirs):
-            add_files(zf, dpath, fnames, dirrelpath, None)
-        else:
-            add_files(zf, dpath, fnames, dirrelpath, allowed, allowed_files)
-            
-    zf.close()
-    chdir(orig_cwd)
-    print "%s contents:" % zf_name
-    zf.printdir()
-    return zf
-                
-# ------------------------------------------------------------------------------
-# Main
-# ------------------------------------------------------------------------------
-usage = "Harvests results from the given dirs into separate zip archives, " \
-        "including results.cvs, HAR/pcap, logs, masked sequences\n\n" \
-        "Usage:\nharvest [option] [dir1 dir2 ..]\n\n" \
-        "Options:\n" \
-        "\t-h\tShow this help\n" \
-        "\t--viewports\tinclude viewports\n"
-include_viewports = False
-dirs = []
-
-if len(sys.argv) < 2:
-    sys.exit(usage)
-elif len(sys.argv) >= 2:
-    if sys.argv[1] == '--viewports':
-        include_viewports = True
-        dirs = sys.argv[2:]
-    elif sys.argv[1] == '-h':
-        sys.exit(usage)
-    else:
-        dirs = sys.argv[1:]
+def main():
+    print "Generating sample data..."
     
-    # do zipping
-    for d in dirs:
-        make_zip(d, include_viewports) 
+    
+    nums = generatate_num_data(SAMPLE_SIZE)
+    strs = generatate_str_data(SAMPLE_SIZE)
+    
+    
+    #b = num_asc(a)
+    #print b
+    #print a
+    
+    timethese(BENCHMARK_ITERATIONS,
+        (
+            ("num_asc",        lambda : common_asc(nums)),
+            ("num_desc",       lambda : common_desc(nums)),
+            ("num_desc_rev",   lambda : common_desc_rev(nums)),
+            ("num_desc_cmp",   lambda : num_desc_cmp(nums)),
+            ("str_asc",        lambda : common_asc(strs)),
+            ("str_desc",       lambda : common_desc(strs)),
+            ("str_desc_rev",   lambda : common_desc_rev(strs)),
+            ("str_desc_cmp",   lambda : str_desc_cmp(strs)),
+        )
+    )
+
+
+def generatate_num_data(N):
+    """
+    Generate sample sequence of integer numbers, size = N
+    """
+    
+    itemrange = 1000 * 1000
+    a = []
+
+    for x in xrange(N):
+        a.append(random.randint(0, itemrange - 1))
+    return a
+
+
+def generatate_str_data(N):
+    """
+    Generate sample sequence of strings, size = N
+    """
+
+    chars = string.ascii_uppercase + string.ascii_lowercase
+    itemlen = 10
+    a = []
+
+    for x in xrange(N):
+        a.append(''.join(random.choice(chars) for s in xrange(itemlen)))
+    return a
+
+
+def common_asc(data):
+    return sorted(data)
+
+
+def common_desc(data):
+    ###return sorted(data).reverse()
+
+
+def common_desc_rev(data):
+    return sorted(data, reverse=True)
+
+
+def num_desc_cmp(data):
+    
+    def rev_num_compare(a, b):
+        return b - a
+    
+    return sorted(data, cmp=rev_num_compare)
+
+def str_desc_cmp(data):
+    
+    def rev_str_compare(a, b):
+        if a < b:
+            return 1
+        elif a > b:
+            return -1
+        else:
+            return 0
+    
+    return sorted(data, cmp=rev_str_compare)
+
+
+
+if __name__ == '__main__':
+    main()
