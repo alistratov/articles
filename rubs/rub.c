@@ -1,4 +1,4 @@
 
-unsigned int x_usd_rub;		// exchange rate in kopecks
-unsigned int x_eur_rub;
+volatile unsigned long x_usd_rub;		// exchange rate in kopecks
+volatile unsigned long x_eur_rub;
 
